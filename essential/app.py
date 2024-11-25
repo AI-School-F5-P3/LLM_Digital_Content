@@ -4,13 +4,16 @@ from src.models import ContentGenerator
 from src.prompts import PLATFORM_TEMPLATES
 from src.utils import format_prompt, post_process_content
 from config import ContentRequest
+import time
 
 def main():
     st.title("AI Content Generator")
     
-    # Initialize content generator
+    # Inicializar el generador con manejo de estado
     if 'generator' not in st.session_state:
-        st.session_state.generator = ContentGenerator()
+        with st.spinner("Loading model... This may take a few minutes..."):
+            st.session_state.generator = ContentGenerator()
+            st.success("Model loaded successfully!")
     
     # Input form
     with st.form("content_form"):
@@ -23,7 +26,14 @@ def main():
         submit = st.form_submit_button("Generate Content")
     
     if submit and theme and audience:
-        with st.spinner("Generating content..."):
+        try:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Update progress bar
+            status_text.text("Preparing prompt...")
+            progress_bar.progress(25)
+            
             # Create content request
             request = ContentRequest(
                 theme=theme,
@@ -33,17 +43,25 @@ def main():
                 tone=tone
             )
             
-            # Get platform-specific template
+            # Get template and format prompt
             template = PLATFORM_TEMPLATES[platform]
-            
-            # Format prompt
             prompt = format_prompt(template, request)
             
-            # Generate content
+            status_text.text("Generating content...")
+            progress_bar.progress(50)
+            
+            # Generate content with timeout
+            start_time = time.time()
             content = st.session_state.generator.generate_content(prompt)
+            
+            status_text.text("Post-processing content...")
+            progress_bar.progress(75)
             
             # Post-process content
             processed_content = post_process_content(content, platform)
+            
+            progress_bar.progress(100)
+            status_text.text("Content generated successfully!")
             
             # Display results
             st.subheader("Generated Content")
@@ -53,6 +71,14 @@ def main():
                 processed_content,
                 file_name=f"{platform.lower()}_content.txt"
             )
+            
+            # Display generation time
+            generation_time = time.time() - start_time
+            st.info(f"Generation time: {generation_time:.2f} seconds")
+            
+        except Exception as e:
+            st.error(f"Error generating content: {str(e)}")
+            st.info("Please try again with different parameters or reload the page.")
 
 if __name__ == "__main__":
     main()

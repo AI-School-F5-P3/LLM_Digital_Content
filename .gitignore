@@ -165,3 +165,7 @@ stroke_prediction_project/notebooks/Brain_Data_Organised/
 *.pth
 *.pkl
 *.joblib
+
+# Ignorar la caché de modelos
+model_cache/
+offload/
