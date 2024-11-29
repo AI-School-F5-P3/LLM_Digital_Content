@@ -2,12 +2,12 @@ import streamlit as st
 from src.models import ContentGenerator
 from src.prompts import PLATFORM_TEMPLATES
 from src.utils import format_prompt, post_process_content
-from src.image_utils import ImageRetriever  # New import
+from src.image_utils import ImageRetriever
 from config import ContentRequest, ModelConfig
 import time
 
 def main():
-    st.title("AI Content Generator - Enhanced Version")
+    st.title("AI Content Generator - Advanced Version")
     
     # Initialize generator
     if 'generator' not in st.session_state:
@@ -19,25 +19,30 @@ def main():
     if 'image_retriever' not in st.session_state:
         st.session_state.image_retriever = ImageRetriever()
     
-    # Sidebar for model selection and advanced options
+    # Sidebar for advanced options
     with st.sidebar:
         st.header("Advanced Options")
         
-        # Get available models, handling potential access issues
+        # Model Selection
         available_models = list(ModelConfig.AVAILABLE_MODELS.keys())
+        selected_model = st.selectbox(
+            "Select Model",
+            available_models,
+            format_func=lambda x: f"{x.title()} - {ModelConfig.AVAILABLE_MODELS[x]['description']}"
+        )
         
-        if not available_models:
-            st.error("No models are currently available. Check your Hugging Face access.")
-            selected_model = None
-        else:
-            selected_model = st.selectbox(
-                "Select Model",
-                available_models,
-                format_func=lambda x: f"{x.title()} - {ModelConfig.AVAILABLE_MODELS[x]['description']}"
-            )
+        # Language Selection
+        selected_language = st.selectbox(
+            "Content Language",
+            list(ModelConfig.SUPPORTED_LANGUAGES.keys()),
+            format_func=lambda x: ModelConfig.SUPPORTED_LANGUAGES[x]
+        )
         
+        # Advanced toggles
         include_image = st.checkbox("Include AI-generated image")
-        
+        scientific_mode = st.checkbox("Scientific Content Mode")
+        financial_news_mode = st.checkbox("Financial News Mode")
+    
     # Main form
     with st.form("content_form"):
         col1, col2 = st.columns(2)
@@ -56,15 +61,22 @@ def main():
     
     if submit and theme and audience:
         try:
-            # Progress tracking
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # Prepare request
-            status_text.text("Preparing content generation...")
-            progress_bar.progress(25)
+            # Scientific Mode Processing
+            if scientific_mode:
+                status_text.text("Retrieving scientific documents...")
+                scientific_docs = st.session_state.generator.generate_scientific_content(theme, selected_language)
+                context += f"\n\nScientific Context: {scientific_docs}"
             
-            # Image retrieval
+            # Financial News Mode
+            if financial_news_mode:
+                status_text.text("Fetching latest financial market information...")
+                financial_news = st.session_state.generator.generate_financial_news(selected_language)
+                context += f"\n\nFinancial News: {financial_news}"
+            
+            # Image Retrieval
             retrieved_images = []
             if include_image:
                 status_text.text("Retrieving relevant images...")
@@ -80,7 +92,8 @@ def main():
                 tone=tone,
                 company_info=company_info,
                 selected_model=selected_model,
-                include_image=include_image
+                include_image=include_image,
+                language=selected_language
             )
             
             # Generate content
@@ -139,7 +152,6 @@ def main():
                 
         except Exception as e:
             st.error(f"Error: {str(e)}")
-            st.info("Please try again with different parameters or reload the page.")
 
 if __name__ == "__main__":
     main()
