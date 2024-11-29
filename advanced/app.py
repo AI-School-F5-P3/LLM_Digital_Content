@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 from src.models import ContentGenerator
 from src.prompts import PLATFORM_TEMPLATES
@@ -38,8 +39,13 @@ def main():
             format_func=lambda x: ModelConfig.SUPPORTED_LANGUAGES[x]
         )
         
-        # Advanced toggles
-        include_image = st.checkbox("Include AI-generated image")
+        # Image repository with Pixabay as default
+        image_repository = st.selectbox(
+            "Image Repository",
+            ["Pixabay", "Unsplash"],
+            index=0  # Set Pixabay as default
+        )
+        
         scientific_mode = st.checkbox("Scientific Content Mode")
         financial_news_mode = st.checkbox("Financial News Mode")
     
@@ -66,9 +72,11 @@ def main():
             
             # Scientific Mode Processing
             if scientific_mode:
-                status_text.text("Retrieving scientific documents...")
                 scientific_docs = st.session_state.generator.generate_scientific_content(theme, selected_language)
-                context += f"\n\nScientific Context: {scientific_docs}"
+                if scientific_docs.get('status') == 'error':
+                    st.warning(f"Scientific content retrieval failed: {scientific_docs.get('message', 'Unknown error')}")
+                else:
+                    context += f"\n\nScientific Context: {scientific_docs}"
             
             # Financial News Mode
             if financial_news_mode:
@@ -78,11 +86,22 @@ def main():
             
             # Image Retrieval
             retrieved_images = []
-            if include_image:
-                status_text.text("Retrieving relevant images...")
+            status_text.text("Retrieving relevant images...")
+            if image_repository == "Unsplash":
                 retrieved_images = st.session_state.image_retriever.get_relevant_image(theme)
+            else:  # Default to Pixabay
+                retrieved_images = st.session_state.image_retriever.get_pixabay_images(theme)
+
                 if retrieved_images:
-                    st.image(retrieved_images[0]['url'], caption=retrieved_images[0]['description'])
+                    st.image(
+                        retrieved_images[0]['url'], 
+                        caption=retrieved_images[0].get('description', theme),
+                        use_column_width='auto',
+                        width=400
+                    )
+                    with st.expander("Image Details"):
+                        st.write(f"Source: {image_repository}")
+                        st.write(f"Tags/Description: {retrieved_images[0].get('tags', 'N/A')}")
             
             request = ContentRequest(
                 theme=theme,
@@ -92,7 +111,6 @@ def main():
                 tone=tone,
                 company_info=company_info,
                 selected_model=selected_model,
-                include_image=include_image,
                 language=selected_language
             )
             
@@ -105,6 +123,8 @@ def main():
             # Get and format prompt
             template = PLATFORM_TEMPLATES[platform]
             prompt = format_prompt(template, request)
+            prompt += f"\nLanguage: {selected_language}"
+            prompt += f"\nStrict Instructions: Generate content exclusively in {ModelConfig.SUPPORTED_LANGUAGES[selected_language]}"
             
             # Add image context to prompt if image retrieved
             if retrieved_images:

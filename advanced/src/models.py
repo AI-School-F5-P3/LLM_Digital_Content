@@ -1,11 +1,27 @@
-# models.py
+# src/models.py
+# Standard library imports
+import os
+import time
+from typing import Dict, Any
+
+# Environment and configuration
+from dotenv import load_dotenv
+
+# Machine learning and AI libraries
 import torch
 import openai
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
+# Third-party libraries
+import requests # for finantial news api
+import finnhub
+import xml.etree.ElementTree as ET
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+import chromadb
+
+# Local imports
 from config import ModelConfig
-import os
-from dotenv import load_dotenv
-import requests  # For financial news API
 
 load_dotenv()
 
@@ -17,6 +33,7 @@ class ContentGenerator:
         self.huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         openai.api_key = self.openai_api_key
+        self.rag_storage = ScientificRAG() # Existing initialization...
         
     def load_model(self, model_key: str):
         if model_key == "openai":
@@ -60,29 +77,10 @@ class ContentGenerator:
         
         return self.models[model_key], self.tokenizers[model_key]
     
-    def generate_financial_news(self, language='es'):
-        """
-        Fetch updated financial market information
-        Uses a hypothetical financial news API
-        """
-        try:
-            # Replace with actual financial news API endpoint
-            api_url = "https://financial-news-api.example.com/latest"
-            params = {"language": language}
-            
-            response = requests.get(api_url, params=params)
-            response.raise_for_status()
-            
-            return response.json()
-        except Exception as e:
-            return {"error": str(e)}
-    
     def generate_financial_news(self, language='en'):
         """
         Fetch updated financial market information using Finnhub API
         """
-        import finnhub
-
         try:
             # Load Finnhub API key from environment
             finnhub_api_key = os.getenv("FINNHUB_API_KEY")
@@ -120,21 +118,17 @@ class ContentGenerator:
     def generate_content(self, prompt: str, model_key: str = "mistral") -> dict:
         try:
             if model_key == "openai":
-                # OpenAI GPT generation
-                if not self.openai_api_key:
-                    return {
-                        "status": "error",
-                        "content": "OpenAI API key not configured",
-                        "model_used": model_key
-                    }
+                language = prompt.split("Language:")[1].split("\n")[0].strip() if "Language:" in prompt else "en"
+                
+                messages = [
+                    {"role": "system", "content": f"You must respond in {language}. Generate content precisely following the user's requirements."},
+                    {"role": "user", "content": prompt}
+                ]
                 
                 response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a helpful content generation assistant."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=256,
+                    messages=messages,
+                    max_tokens=512,
                     temperature=0.4
                 )
                 
@@ -159,18 +153,21 @@ class ContentGenerator:
                 padding=True
             ).to(device)
             
-            # Generar con restricciones
+            # Use model-specific generation config
+            generation_config = ModelConfig.AVAILABLE_MODELS[model_key]['generation_config']
+            
+            # Use the config in model generation
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=256,
+                    max_new_tokens=generation_config['max_new_tokens'],
                     num_return_sequences=1,
                     do_sample=True,
-                    temperature=0.4,
-                    top_k=50,
-                    top_p=0.95,
-                    repetition_penalty=1.1,
-                    no_repeat_ngram_size=2
+                    temperature=generation_config['temperature'],
+                    top_k=generation_config['top_k'],
+                    top_p=generation_config['top_p'],
+                    repetition_penalty=generation_config['repetition_penalty'],
+                    no_repeat_ngram_size=generation_config['no_repeat_ngram_size']
                 )
             
             # Decodificar output completo
@@ -209,11 +206,6 @@ class ContentGenerator:
         Advanced RAG-based scientific content generation
         Uses arXiv API with more sophisticated retrieval and processing
         """
-        import requests
-        import xml.etree.ElementTree as ET
-        from sentence_transformers import SentenceTransformer
-        from sklearn.metrics.pairwise import cosine_similarity
-
         try:
             # ArXiv API query
             base_url = "http://export.arxiv.org/api/query"
@@ -245,7 +237,7 @@ class ContentGenerator:
                     'summary': summary,
                     'authors': authors
                 })
-
+                
             # Semantic similarity ranking using sentence transformers
             model = SentenceTransformer('all-MiniLM-L6-v2')
             
@@ -263,26 +255,34 @@ class ContentGenerator:
                 reverse=True
             )[:3]
 
-            # Create structured scientific context
+            # Add documents to RAG storage
+            self.rag_storage.add_documents(documents)
+            
+            # Perform semantic search on the theme
+            semantic_search_results = self.rag_storage.search_documents(theme)
+            
+            # Combine the original context with semantic search results
             scientific_context = {
                 "theme": theme,
-                "top_documents": [
+                "arxiv_documents": [
                     {
                         "title": doc['title'],
                         "summary": doc['summary'],
-                        "authors": doc['authors'],
-                        "relevance_score": score
-                    } for doc, score in ranked_docs
+                        "authors": doc['authors']
+                    } for doc in documents
                 ],
+                "semantic_search_results": semantic_search_results,
                 "language": language
             }
 
             return scientific_context
 
         except Exception as e:
+            print(f"Scientific content error: {e}")  # Add detailed logging
             return {
                 "status": "error",
-                "message": f"Scientific content retrieval error: {str(e)}"
+                "message": f"Scientific content retrieval error: {str(e)}",
+                "details": str(e)  # More detailed error
             }
     
     def __del__(self):
@@ -294,11 +294,56 @@ class ContentGenerator:
         # Limpiar caché de MPS si está disponible
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
+            
+class ScientificRAG:
+    def __init__(self, cache_dir='vector_cache'):
+        # Create cache directory if it doesn't exist
+        self.cache_dir = cache_dir
+        os.makedirs(self.cache_dir, exist_ok=True)
+        
+        # Initialize Chroma client
+        self.chroma_client = chromadb.PersistentClient(path=self.cache_dir)
+        
+        # Create or get collection
+        self.collection = self.chroma_client.get_or_create_collection(name="scientific_documents")
+        
+        # Embedding model
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# Optional: Add to your config.py to support these settings
-ModelConfig.AVAILABLE_MODELS = {
-    "mistral": {
-        "name": "mistralai/Mistral-7B-Instruct-v0.2",  # Consider using a smaller variant
-        "description": "Compact, efficient language model"
-    }
-}
+    def add_documents(self, documents):
+        for doc in documents:
+            # Generate unique ID and embedding
+            doc_id = str(hash(doc['title']))
+            embedding = self.model.encode(doc['summary']).tolist()
+            
+            # Add to Chroma collection
+            self.collection.add(
+                ids=[doc_id],
+                embeddings=[embedding],
+                metadatas=[{
+                    'title': doc['title'],
+                    'authors': ', '.join(doc['authors']),
+                    'theme': doc.get('theme', 'general')
+                }],
+                documents=[doc['summary']]
+            )
+
+    def search_documents(self, query, top_k=3):
+        query_embedding = self.model.encode(query).tolist()
+        
+        results = self.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=top_k
+        )
+        
+        # Transform results into a more readable format
+        formatted_results = []
+        for i in range(top_k):
+            formatted_results.append({
+                'title': results['metadatas'][0][i]['title'],
+                'summary': results['documents'][0][i],
+                'authors': results['metadatas'][0][i]['title'],
+                'relevance_score': results['distances'][0][i]
+            })
+        
+        return formatted_results

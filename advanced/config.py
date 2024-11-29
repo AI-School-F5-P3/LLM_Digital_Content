@@ -1,3 +1,4 @@
+# config.py
 import os
 from pydantic import BaseModel
 from typing import Optional
@@ -9,7 +10,15 @@ class ModelConfig:
     AVAILABLE_MODELS = {
         "mistral": {
             "name": "mistralai/Mistral-7B-Instruct-v0.2",
-            "description": "Powerful general-purpose model"
+            "description": "Powerful general-purpose model",
+            "generation_config": {
+                "max_new_tokens": 256,
+                "temperature": 0.4,
+                "top_k": 50,
+                "top_p": 0.95,
+                "repetition_penalty": 1.1,
+                "no_repeat_ngram_size": 2
+            }
         },
         "llama2": {
             "name": "meta-llama/Llama-2-7b-chat-hf",
