@@ -6,6 +6,9 @@ from src.utils import format_prompt, post_process_content
 from src.image_utils import ImageRetriever
 from config import ContentRequest, ModelConfig
 import time
+import os
+
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 def main():
     st.title("AI Content Generator - Advanced Version")
@@ -89,19 +92,32 @@ def main():
             status_text.text("Retrieving relevant images...")
             if image_repository == "Unsplash":
                 retrieved_images = st.session_state.image_retriever.get_relevant_image(theme)
+                print("Retrieved Images:", retrieved_images) 
             else:  # Default to Pixabay
                 retrieved_images = st.session_state.image_retriever.get_pixabay_images(theme)
 
                 if retrieved_images:
-                    st.image(
-                        retrieved_images[0]['url'], 
-                        caption=retrieved_images[0].get('description', theme),
-                        use_column_width='auto',
-                        width=400
-                    )
-                    with st.expander("Image Details"):
-                        st.write(f"Source: {image_repository}")
-                        st.write(f"Tags/Description: {retrieved_images[0].get('tags', 'N/A')}")
+                    try:
+                        # Print image details for debugging
+                        print("First image URL:", retrieved_images[0].get('url'))
+                        print("Image description:", retrieved_images[0].get('description', 'No description'))
+
+                        # Attempt to display image
+                        st.image(
+                            retrieved_images[0]['url'], 
+                            caption=retrieved_images[0].get('description', theme),
+                            use_column_width=True  # Changed from 'auto'
+                        )
+
+                        # Image details expander
+                        with st.expander("Image Details"):
+                            st.write(f"Source: {image_repository}")
+                            st.write(f"Description: {retrieved_images[0].get('description', 'N/A')}")
+                    except Exception as e:
+                        st.error(f"Error displaying image: {e}")
+                        st.write(retrieved_images)  # Show raw image data
+                else:
+                    st.warning(f"No images found for theme: {theme}")
             
             request = ContentRequest(
                 theme=theme,

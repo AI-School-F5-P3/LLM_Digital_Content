@@ -34,7 +34,7 @@ class ImageRetriever:
         }
         
         try:
-            response = requests.get(self.base_url, params=params)
+            response = requests.get(self.unsplash_base_url, params=params)
             response.raise_for_status()
             
             data = response.json()

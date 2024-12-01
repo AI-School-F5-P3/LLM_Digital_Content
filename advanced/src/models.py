@@ -133,6 +133,7 @@ class ContentGenerator:
                 )
                 
                 generated_text = response.choices[0].message.content.strip()
+                generated_text = generated_text.replace(prompt, '').strip()
                 
                 return {
                     "status": "success",

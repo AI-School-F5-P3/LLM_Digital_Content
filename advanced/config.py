@@ -1,6 +1,6 @@
 # config.py
 import os
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -42,14 +42,26 @@ class ModelConfig:
         "fr": "French",
         "it": "Italian"
     }
+    
+    @classmethod
+    def validate_model(cls, model_key: str) -> bool:
+        """
+        Validate if the selected model is available
+        """
+        return model_key in cls.AVAILABLE_MODELS
 
 class ContentRequest(BaseModel):
-    theme: str
-    audience: str
-    platform: str
-    context: str = ""
-    tone: str = "professional"
-    company_info: Optional[str] = None
-    selected_model: str = "mistral"
+    theme: str = Field(..., min_length=2, max_length=100)
+    audience: str = Field(..., min_length=2, max_length=50)
+    platform: str = Field(..., min_length=2, max_length=20)
+    context: str = Field(default="", max_length=500)
+    tone: str = Field(default="professional", patter="^(professional|casual|formal|friendly)$")
+    company_info: Optional[str] = Field(default=None, max_length=300)
+    selected_model: str = Field(default="mistral", validation_alias="selected_model")
     include_image: bool = False
-    language: str = "en"  # Default to English
+    language: str = Field(default="en", patter="^(es|en|fr|it)$")
+    
+    @classmethod
+    def validate_model(cls, values):
+        if not ModelConfig.validate_model(values.get('selected_model', 'mistral')):
+            raise ValueError("Invalid model selected")

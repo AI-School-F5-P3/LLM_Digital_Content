@@ -9,16 +9,32 @@ def format_prompt(template: str, request: 'ContentRequest') -> str:
     )
 
 def post_process_content(content: str, platform: str) -> str:
+    # Remove any markdown or HTML-like formatting
+    def clean_content(text):
+        # Remove markdown headers
+        text = text.replace('#', '').strip()
+        # Remove HTML tags
+        text = text.replace('<p>', '').replace('</p>', '').strip()
+        return text
+
+    # Platform-specific post-processing
     if platform == "Twitter/X":
-        # Split into tweets and add numbering
-        tweets = content.split("\n\n")
-        return "\n\n".join(f"Tweet {i+1}/{len(tweets)}:\n{tweet}" 
-                          for i, tweet in enumerate(tweets))
+        # Split into tweets and clean
+        tweets = content.split('\n')
+        cleaned_tweets = [clean_content(tweet) for tweet in tweets if tweet.strip()]
+        return '\n\n'.join(cleaned_tweets)
         
     elif platform == "Blog":
-        # Formatear como entrada de blog con párrafos
-        paragraphs = content.split("\n\n")
-        return "\n".join(f"<p>{paragraph}</p>" for paragraph in paragraphs)
+        # Clean and join paragraphs
+        paragraphs = content.split('\n')
+        cleaned_paragraphs = [clean_content(para) for para in paragraphs if para.strip()]
+        return '\n\n'.join(cleaned_paragraphs)
+    
+    elif platform == "LinkedIn":
+        # Clean and format for professional look
+        paragraphs = content.split('\n')
+        cleaned_paragraphs = [clean_content(para) for para in paragraphs if para.strip()]
+        return '\n\n'.join(cleaned_paragraphs)
 
     elif platform == "Instagram":
         # Adaptar a un estilo atractivo con hashtags y línea separadora
@@ -37,5 +53,5 @@ def post_process_content(content: str, platform: str) -> str:
         return f"Hello, little ones! Let's learn something cool today:\n\n{bullets}"
 
     else:
-        # Devuelve el contenido sin cambios si no hay formato específico
-        return content
+        # Default: just clean the content
+        return clean_content(content)

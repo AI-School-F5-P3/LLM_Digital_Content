@@ -166,6 +166,11 @@ stroke_prediction_project/notebooks/Brain_Data_Organised/
 *.pkl
 *.joblib
 
-# Ignorar la caché de modelos
+# Vector and Model Caches
+vector_cache/
 model_cache/
 offload/
+*.sqlite3
+*.pt
+*.bin
+*.json

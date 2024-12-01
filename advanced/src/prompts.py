@@ -1,184 +1,90 @@
 # src/prompts.py
 PLATFORM_TEMPLATES = {
-    "Twitter/X": """You are an expert social media content creator specializing in crafting engaging, concise tweet threads. 
+    "Twitter/X": """Generate a 4-tweet thread about {theme} following these guidelines:
 
-TASK: Create a 4-tweet thread about {theme} that is informative, engaging, and tailored to {audience}.
+- Target Audience: {audience}
+- Communication Style: {tone}
+- Include Context: {context}
+- Company/Personal Angle: {company_info}
 
-STRICT GUIDELINES:
-- Each tweet must be exactly 280 characters or less
-- Use a {tone} communication style
-- Include at least one unique, surprising fact
-- Incorporate storytelling elements
-- Use strategic hashtags
-- Ensure coherent narrative across all tweets
+Requirements:
+1. Each tweet must be 280 characters or less
+2. Create a coherent narrative across tweets
+3. Include one unique, surprising fact
+4. Use strategic hashtags
+5. Ensure clear, engaging language
 
-REQUIRED CONTENT STRUCTURE:
-Tweet 1 (Hook): 
-- Grab attention immediately
-- Pose a provocative question or share a startling statistic
-- Directly relate to {theme}
-
-Tweet 2 (Context):
-- Provide deeper insight
-- Use {context} to add credibility
-- Include a specific, actionable insight
-
-Tweet 3 (Personal/Company Angle):
-- Integrate {company_info}
-- Share a unique perspective or personal experience
-- Connect the theme to broader implications
-
-Tweet 4 (Call to Action):
-- Encourage engagement
-- Ask a thought-provoking question
-- Provide a clear next step for the audience
-
-EXAMPLE FORMAT:
-🔥 Tweet 1/4: [Attention-grabbing hook]
-🧠 Tweet 2/4: [Deeper context]
-💡 Tweet 3/4: [Personal insight]
-🚀 Tweet 4/4: [Call to action]
-
-Hashtag Strategy: 
-- 2-3 relevant hashtags
-- Mix of broad and specific tags
-
-ABSOLUTELY AVOID:
-- Generic statements
-- Jargon
-- Disconnected facts
-- Lack of narrative flow
-""",
+Output Format:
+First tweet should be a compelling hook
+Second tweet provides deeper insight
+Third tweet adds personal or company perspective
+Fourth tweet includes a clear call to action""",
     
-    "LinkedIn": """You are a top-tier content strategist creating a LinkedIn post that delivers maximum professional value.
+    "LinkedIn": """Create a professional LinkedIn post about {theme}:
 
-STRATEGIC CONTENT GENERATION FRAMEWORK:
+Target Audience: {audience}
+Tone: {tone}
 
-OBJECTIVE: Craft a sophisticated, insight-driven LinkedIn post about {theme}
+Post Structure:
+1. Headline: Provocative, value-driven
+2. Opening (50-75 words): 
+   - Personal or industry narrative
+   - Establish immediate relevance
 
-CORE REQUIREMENTS:
-- Length: 250-400 words
-- Audience: {audience}
-- Tone: {tone}
-- Integration: {company_info} and {context}
+3. Three Key Sections (75-100 words each):
+   - Industry trend analysis
+   - Strategic implementation
+   - Innovative perspective
 
-PRECISE CONTENT ARCHITECTURE:
+4. Incorporate: {context} and {company_info}
 
-1. HEADLINE STRATEGY:
-- Provocative, metrics-driven headline
-- Immediately communicate unique value proposition
-- Spark intellectual curiosity
+5. Call to Action:
+   - Invite professional dialogue
+   - Suggest next steps
 
-2. NARRATIVE FRAMEWORK:
-a) Opening Paragraph (50-75 words)
-- Personal or industry-level narrative
-- Establish immediate relevance
-- Create emotional/professional connection
-
-b) Insight Blocks (3 strategic sections, 75-100 words each)
-- Section 1: Industry Trend Analysis
-  * Quantitative data point
-  * Comparative insight
-  * Future projection
-
-- Section 2: Strategic Implementation
-  * Actionable framework
-  * Potential challenges
-  * Mitigation strategies
-
-- Section 3: Transformative Perspective
-  * Innovative approach
-  * Counterintuitive observation
-  * Potential breakthrough
-
-3. COMPANY/PERSONAL CONTEXT:
-- Seamless integration of {company_info}
-- Demonstrate thought leadership
-- Provide credibility through experience
-
-4. CALL TO ACTION:
-- Explicit engagement prompt
-- Invite professional dialogue
-- Suggest next learning steps
-
-5. PROFESSIONAL SIGNALING:
-- Carefully selected hashtags
-- Industry-specific terminology
-- Nuanced language
-
-TONE CALIBRATION:
-- {tone} communication style
-- Balance between authoritative and approachable
-- Use language that resonates with {audience}
-
-FORBIDDEN ELEMENTS:
-- Clichés
-- Unsupported claims
-- Lack of specificity
-- Generic motivational statements
-""",
+Style Notes:
+- Use professional, nuanced language
+- Back claims with specific insights
+- Avoid clichés and generic statements""",
     
-    "Blog": """COMPREHENSIVE CONTENT GENERATION PROTOCOL
+    "Blog": """Develop a comprehensive blog post about {theme}:
 
-OBJECTIVE: Produce a meticulously structured, deeply researched blog post about {theme}
+Audience: {audience}
+Tone: {tone}
 
-STRATEGIC COMPONENTS:
+Structure:
+1. Compelling Headline
+2. Introduction (150-200 words):
+   - Contextual narrative
+   - Clear value proposition
+   - Incorporate {context}
 
-1. HEADLINE ENGINEERING:
-- Provocative, SEO-optimized headline
-- Promise of unique value
-- Instantaneous reader engagement
+3. Main Sections:
+   a) Fundamental Overview
+      - Historical context
+      - Current landscape
 
-2. INTRODUCTION (150-200 words):
-- Contextual narrative
-- Personal/industry anecdote
-- Clear value proposition
-- Incorporate {context}
+   b) Detailed Analysis
+      - Technical insights
+      - Research-backed perspectives
 
-3. CONTENT ARCHITECTURE:
-a) Section 1: Fundamental Landscape
-- Comprehensive overview
-- Historical context
-- Current state of {theme}
+   c) Practical Applications
+      - Actionable strategies
+      - Real-world implementation
 
-b) Section 2: Deep Analysis
-- Technical insights
-- Research-backed perspectives
-- Cutting-edge developments
+4. Company/Personal Perspective:
+   Integrate {company_info} to demonstrate expertise
 
-c) Section 3: Practical Application
-- Actionable strategies
-- Real-world implementation
-- Potential challenges and solutions
+5. Future Outlook
+   - Emerging trends
+   - Potential innovations
 
-4. COMPANY/PERSONAL INTEGRATION:
-- Strategic placement of {company_info}
-- Demonstrate expertise
-- Create credibility bridge
+6. Conclusion:
+   - Synthesize key points
+   - Powerful call to action
 
-5. ADVANCED INSIGHTS SECTION:
-- Forward-looking predictions
-- Emerging trends
-- Potential disruptions
-
-6. CONCLUSION:
-- Synthesize key points
-- Future outlook
-- Powerful call to action
-
-TONE CALIBRATION:
-- {tone} communication style
-- Tailored to {audience}
-- Balance between academic rigor and accessibility
-
-TECHNICAL REQUIREMENTS:
+Specifications:
 - 1000-1500 words
-- Markdown compatible
-- SEO-friendly structure
-
-PROHIBITED ELEMENTS:
-- Superficial content
-- Unsupported claims
-- Lack of original perspective
-"""
+- Clear, accessible language
+- Avoid superficial content"""
 }
