@@ -19,11 +19,20 @@ import xml.etree.ElementTree as ET
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import chromadb
+from langsmith import Client, traceable
+from openai import OpenAI
 
 # Local imports
 from config import ModelConfig
 
 load_dotenv()
+
+def setup_langsmith_tracking():
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+    
+    langsmith_client = Client()
+    return langsmith_client
 
 class ContentGenerator:
     def __init__(self):
@@ -55,7 +64,7 @@ class ContentGenerator:
                 if tokenizer.pad_token is None:
                     tokenizer.pad_token = tokenizer.eos_token
                 
-                # Configuración específica para MPS
+                # Model loading
                 model = AutoModelForCausalLM.from_pretrained(
                     model_config["name"],
                     token=self.huggingface_token,
@@ -115,19 +124,54 @@ class ContentGenerator:
                 "message": f"Financial news retrieval error: {str(e)}"
             }
     
+    # Modify generate_content method to use LangSmith decorator
+    @traceable(project_name="LANGCHAIN_API_KEY_ADVANCED")
     def generate_content(self, prompt: str, model_key: str = "mistral") -> dict:
         try:
+            # Remove image-related context from prompt
+            image_context_markers = [
+                "Relevant Image URL:", 
+                "Image Description:", 
+                "Image Context:"
+            ]
+            
+            for marker in image_context_markers:
+                if marker in prompt:
+                    # Split at the marker and take the part before it
+                    prompt = prompt.split(marker)[0].strip()
+
+            # Extract company info from prompt if it exists
+            company_info = ""
+            if "{company_info}" in prompt:
+                try:
+                    # Split the prompt and extract company info
+                    company_info = prompt.split("{company_info}")[1].split("{")[0].strip()
+                except Exception as e:
+                    print(f"Error extracting company info: {e}")
+            
+            # Remove {company_info} placeholder from prompt
+            prompt = prompt.replace("{company_info}", "").strip()
+
+            # Add company info to the prompt if available
+            if company_info:
+                prompt += f"\n\nAdditional Context - Company/Personal Info: {company_info}"
+                
             if model_key == "openai":
+                client = OpenAI(api_key=self.openai_api_key)
+                
                 language = prompt.split("Language:")[1].split("\n")[0].strip() if "Language:" in prompt else "en"
                 
-                messages = [
-                    {"role": "system", "content": f"You must respond in {language}. Generate content precisely following the user's requirements."},
-                    {"role": "user", "content": prompt}
-                ]
-                
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=messages,
+                # Truncate prompt if too long
+                max_prompt_length = 4000
+                if len(prompt) > max_prompt_length:
+                    prompt = prompt[:max_prompt_length]
+                    
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": f"You must respond in {language}. Generate content precisely following the user's requirements."},
+                        {"role": "user", "content": prompt}
+                    ],
                     max_tokens=512,
                     temperature=0.4
                 )
@@ -305,8 +349,13 @@ class ScientificRAG:
         # Initialize Chroma client
         self.chroma_client = chromadb.PersistentClient(path=self.cache_dir)
         
-        # Create or get collection
-        self.collection = self.chroma_client.get_or_create_collection(name="scientific_documents")
+        # Create or get collection with predefined metadata
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="scientific_documents",
+            metadata={
+                "hnsw:space": "cosine",  # Optional: specify distance metric
+            }
+        )
         
         # Embedding model
         self.model = SentenceTransformer('all-MiniLM-L6-v2')

@@ -86,5 +86,34 @@ Structure:
 Specifications:
 - 1000-1500 words
 - Clear, accessible language
-- Avoid superficial content"""
+- Avoid superficial content""",
+
+   "Instagram": """Create an engaging Instagram post about {theme}:
+
+Target Audience: {audience}
+Tone: {tone}
+
+Post Structure:
+1. Attention-Grabbing Hook (50-100 words)
+   - Personal story or surprising fact
+   - Relate directly to {theme}
+
+2. Key Insights (100-150 words)
+   - Break down complex ideas
+   - Use conversational language
+   - Incorporate {context}
+
+3. Personal/Brand Connection (50-75 words)
+   - Integrate {company_info}
+   - Show unique perspective
+
+4. Call to Action
+   - Encourage engagement
+   - Ask a question or invite comments
+
+Style Guidelines:
+- Use emojis strategically 🔥
+- Create scroll-stopping content
+- Keep language vibrant and concise
+"""
 }

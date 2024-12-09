@@ -22,10 +22,18 @@ class ModelConfig:
         },
         "llama2": {
             "name": "meta-llama/Llama-2-7b-chat-hf",
-            "description": "Optimized for conversational tasks"
+            "description": "Optimized for conversational tasks",
+            "generation_config": {
+                "max_new_tokens": 256,
+                "temperature": 0.5,
+                "top_k": 50,
+                "top_p": 0.9,
+                "repetition_penalty": 1.1,
+                "no_repeat_ngram_size": 2
+            }
         },
         "openai": {
-            "name": "gpt-3.5-turbo",
+            "name": "gpt-4o-mini",
             "description": "Advanced OpenAI language model"
         }
     }
@@ -51,13 +59,13 @@ class ModelConfig:
         return model_key in cls.AVAILABLE_MODELS
 
 class ContentRequest(BaseModel):
-    theme: str = Field(..., min_length=2, max_length=100)
+    theme: str = Field(..., min_length=2, max_length=50)
     audience: str = Field(..., min_length=2, max_length=50)
     platform: str = Field(..., min_length=2, max_length=20)
     context: str = Field(default="", max_length=500)
     tone: str = Field(default="professional", patter="^(professional|casual|formal|friendly)$")
     company_info: Optional[str] = Field(default=None, max_length=300)
-    selected_model: str = Field(default="mistral", validation_alias="selected_model")
+    selected_model: str = Field(default="mistral")
     include_image: bool = False
     language: str = Field(default="en", patter="^(es|en|fr|it)$")
     

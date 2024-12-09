@@ -1,0 +1,16 @@
+streamlit==1.32.2
+torch==2.1.2
+transformers==4.38.2
+diffusers==0.25.1
+openai==1.13.3
+requests==2.31.0
+pydantic==2.6.4
+python-dotenv==1.0.0
+sentence-transformers==2.6.1
+scikit-learn==1.4.1.post1
+chromadb==0.5.23
+finnhub-python==2.4.19
+langsmith==0.1.48
+pillow==10.2.0
+huggingface-hub==0.21.4
+setuptools==69.2.0

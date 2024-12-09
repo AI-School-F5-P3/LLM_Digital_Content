@@ -45,7 +45,7 @@ def main():
         # Image repository with Pixabay as default
         image_repository = st.selectbox(
             "Image Repository",
-            ["Pixabay", "Unsplash"],
+            ["Pixabay", "Unsplash", "AI Image Generation"],
             index=0  # Set Pixabay as default
         )
         
@@ -90,42 +90,45 @@ def main():
             # Image Retrieval
             retrieved_images = []
             status_text.text("Retrieving relevant images...")
-            if image_repository == "Unsplash":
-                retrieved_images = st.session_state.image_retriever.get_relevant_image(theme)
-                print("Retrieved Images:", retrieved_images) 
-            else:  # Default to Pixabay
-                retrieved_images = st.session_state.image_retriever.get_pixabay_images(theme)
+            try:
+                if image_repository == "AI Image Generation":
+                    retrieved_images = st.session_state.image_retriever.generate_ai_image(theme)
+                elif image_repository == "Unsplash":
+                    retrieved_images = st.session_state.image_retriever.get_relevant_image(theme)
+                else:  # Pixabay
+                    clean_theme = ''.join(
+                        char for char in theme.replace('\n', ' ').strip() 
+                        if char.isalnum() or char.isspace()
+                    )[:50]
+                    retrieved_images = st.session_state.image_retriever.get_pixabay_images(clean_theme)
 
+                # Image display logic
                 if retrieved_images:
-                    try:
-                        # Print image details for debugging
-                        print("First image URL:", retrieved_images[0].get('url'))
-                        print("Image description:", retrieved_images[0].get('description', 'No description'))
-
-                        # Attempt to display image
-                        st.image(
-                            retrieved_images[0]['url'], 
-                            caption=retrieved_images[0].get('description', theme),
-                            use_column_width=True  # Changed from 'auto'
-                        )
-
-                        # Image details expander
-                        with st.expander("Image Details"):
-                            st.write(f"Source: {image_repository}")
-                            st.write(f"Description: {retrieved_images[0].get('description', 'N/A')}")
-                    except Exception as e:
-                        st.error(f"Error displaying image: {e}")
-                        st.write(retrieved_images)  # Show raw image data
+                    image_url = retrieved_images[0].get('url')
+                    image_description = retrieved_images[0].get('description', theme)
+                    
+                    st.image(
+                        image_url, 
+                        caption=image_description,
+                        use_container_width=True
+                    )
                 else:
                     st.warning(f"No images found for theme: {theme}")
+
+            except Exception as e:
+                st.error(f"Image retrieval error: {e}")
+            
+            # Truncate context if it's too long
+            if len(context) > 500:
+                context = context[:500]
             
             request = ContentRequest(
-                theme=theme,
-                audience=audience,
+                theme=theme[:50],  # Ensure theme is not too long
+                audience=audience[:50],
                 platform=platform,
                 context=context,
                 tone=tone,
-                company_info=company_info,
+                company_info=company_info[:300] if company_info else None,
                 selected_model=selected_model,
                 language=selected_language
             )
@@ -141,11 +144,6 @@ def main():
             prompt = format_prompt(template, request)
             prompt += f"\nLanguage: {selected_language}"
             prompt += f"\nStrict Instructions: Generate content exclusively in {ModelConfig.SUPPORTED_LANGUAGES[selected_language]}"
-            
-            # Add image context to prompt if image retrieved
-            if retrieved_images:
-                prompt += f"\n\nRelevant Image URL: {retrieved_images[0]['url']}"
-                prompt += f"\nImage Description: {retrieved_images[0]['description']}"
             
             # Generate content
             result = st.session_state.generator.generate_content(prompt, selected_model)
@@ -187,7 +185,10 @@ def main():
                 st.info("Unable to generate content. Please adjust parameters and try again.")
                 
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Comprehensive error: {str(e)}")
+            # Log the full traceback for debugging
+            import traceback
+            st.text(traceback.format_exc())
 
 if __name__ == "__main__":
     main()

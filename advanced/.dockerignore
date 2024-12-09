@@ -1,0 +1,6 @@
+model_cache/
+offload/
+.git/
+*.pyc
+__pycache__/
+*.log
