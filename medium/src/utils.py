@@ -39,3 +39,29 @@ def post_process_content(content: str, platform: str) -> str:
     else:
         # Devuelve el contenido sin cambios si no hay formato específico
         return content
+    
+def integrate_image_into_content(content: str, image_url: str, image_description: str) -> str:
+    """
+    Integrate an image URL and description into the generated content.
+    
+    Args:
+        content (str): The generated text content
+        image_url (str): URL of the relevant image
+        image_description (str): Description of the image
+    
+    Returns:
+        str: Content with image integration
+    """
+    # Split content into paragraphs
+    paragraphs = content.split('\n\n')
+    
+    # Create Markdown image insertion
+    image_insert = f"\n\n![{image_description}]({image_url} \"{image_description}\")\n\n*Image Source: {image_description}*\n\n"
+    
+    # If we have at least 2 paragraphs, insert the image after the first paragraph
+    if len(paragraphs) >= 2:
+        paragraphs.insert(1, image_insert)
+        return '\n\n'.join(paragraphs)
+    
+    # If content is too short, append image at the end
+    return content + image_insert

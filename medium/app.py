@@ -1,7 +1,7 @@
 import streamlit as st
 from src.models import ContentGenerator
 from src.prompts import PLATFORM_TEMPLATES
-from src.utils import format_prompt, post_process_content
+from src.utils import format_prompt, post_process_content, integrate_image_into_content
 from src.image_utils import ImageRetriever  # New import
 from config import ContentRequest, ModelConfig
 import time
@@ -101,12 +101,19 @@ def main():
             # Generate content
             result = st.session_state.generator.generate_content(prompt, selected_model)
             
-            if result["status"] == "success":
+            if result["status"] == "success"
                 # More stringent content validation
                 if len(result["content"].split()) < 50:
                     st.warning("Generated content is too brief. Regenerating...")
                     # Potentially retry generation or show error
                 else:
+                    # Comment this out integrate image into content if available
+                    # if include_image and retrieved_images:
+                    #     result["content"] = integrate_image_into_content(
+                    #         result["content"], 
+                    #         retrieved_images[0]['url'], 
+                    #         retrieved_images[0]['description']
+                    #     )
                     processed_content = post_process_content(result["content"], platform)
                 # Post-process
                 status_text.text("Post-processing content...")
@@ -119,7 +126,7 @@ def main():
                 status_text.text("Content generated successfully!")
                 
                 st.subheader("Generated Content")
-                st.text_area("Content", processed_content, height=300)
+                st.text_area("Content", processed_content, height=300) # Change text_area for "markdown" to render markdown and delete the height
                 
                 # Metadata and downloads
                 col1, col2 = st.columns(2)

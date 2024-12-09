@@ -1,5 +1,7 @@
 # models.py
 import torch
+from openai import OpenAI
+import openai
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from config import ModelConfig
 import os
@@ -7,17 +9,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Deshabilitar completamente MPS en PyTorch
-os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-
 class ContentGenerator:
     def __init__(self):
         self.models = {}
         self.tokenizers = {}
         self.current_model = None
         self.huggingface_token = os.getenv("HUGGINGFACE_TOKEN")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
         
     def load_model(self, model_key: str):
+        if model_key == "openai":
+            return None, None  # OpenAI doesn't use traditional loading
+        
         if model_key not in self.models:
             model_config = ModelConfig.AVAILABLE_MODELS[model_key]
             
@@ -34,7 +37,7 @@ class ContentGenerator:
                 if tokenizer.pad_token is None:
                     tokenizer.pad_token = tokenizer.eos_token
                 
-                # Configuración específica para MPS
+                # Model loading
                 model = AutoModelForCausalLM.from_pretrained(
                     model_config["name"],
                     token=self.huggingface_token,
@@ -58,6 +61,49 @@ class ContentGenerator:
     
     def generate_content(self, prompt: str, model_key: str = "mistral") -> dict:
         try:
+            # Extract company info from prompt if it exists
+            company_info = ""
+            if "{company_info}" in prompt:
+                try:
+                    # Split the prompt and extract company info
+                    company_info = prompt.split("{company_info}")[1].split("{")[0].strip()
+                except Exception as e:
+                    print(f"Error extracting company info: {e}")
+            
+            # Remove {company_info} placeholder from prompt
+            prompt = prompt.replace("{company_info}", "").strip()
+
+            # Add company info to the prompt if available
+            if company_info:
+                prompt += f"\n\nAdditional Context - Company/Personal Info: {company_info}"
+                
+            if model_key == "openai":
+                client = OpenAI(api_key=self.openai_api_key)
+                
+                # Truncate prompt if too long
+                max_prompt_length = 4000
+                if len(prompt) > max_prompt_length:
+                    prompt = prompt[:max_prompt_length]
+                    
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": f"Generate content precisely following the user's requirements."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=512,
+                    temperature=0.4
+                )
+                
+                generated_text = response.choices[0].message.content.strip()
+                generated_text = generated_text.replace(prompt, '').strip()
+                
+                return {
+                    "status": "success",
+                    "content": generated_text,
+                    "model_used": model_key
+                }
+                
             model, tokenizer = self.load_model(model_key)
             
             device = torch.device("cpu")  # Asegurar CPU
@@ -71,18 +117,21 @@ class ContentGenerator:
                 padding=True
             ).to(device)
             
+            # Use model-specific generation config
+            generation_config = ModelConfig.AVAILABLE_MODELS[model_key]['generation_config']
+            
             # Generar con restricciones
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=256,
+                    max_new_tokens=generation_config['max_new_tokens'],
                     num_return_sequences=1,
                     do_sample=True,
-                    temperature=0.4,
-                    top_k=50,
-                    top_p=0.95,
-                    repetition_penalty=1.1,
-                    no_repeat_ngram_size=2
+                    temperature=generation_config['temperature'],
+                    top_k=generation_config['top_k'],
+                    top_p=generation_config['top_p'],
+                    repetition_penalty=generation_config['repetition_penalty'],
+                    no_repeat_ngram_size=generation_config['no_repeat_ngram_size']
                 )
             
             # Decodificar output completo
@@ -125,11 +174,3 @@ class ContentGenerator:
         # Limpiar caché de MPS si está disponible
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
-
-# Optional: Add to your config.py to support these settings
-ModelConfig.AVAILABLE_MODELS = {
-    "mistral": {
-        "name": "mistralai/Mistral-7B-Instruct-v0.2",  # Consider using a smaller variant
-        "description": "Compact, efficient language model"
-    }
-}
