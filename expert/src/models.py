@@ -1,4 +1,4 @@
-# src/models.py
+# expert/src/models.py
 # Standard library imports
 import os
 
@@ -22,6 +22,7 @@ from openai import OpenAI
 
 # Local imports
 from config import ModelConfig
+from .knowledge_graph import apply_knowledge_graph_rag
 
 load_dotenv()
 
@@ -41,6 +42,7 @@ class ContentGenerator:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         openai.api_key = self.openai_api_key
         self.rag_storage = ScientificRAG() # Existing initialization...
+        self = apply_knowledge_graph_rag(self) # Apply Knowledge Graph RAG enhancement
         
     def load_model(self, model_key: str):
         if model_key == "openai":
