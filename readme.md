@@ -1,4 +1,5 @@
 # AI Content Generator 🚀
+![alt text](image.png)
 
 ## Overview
 
@@ -129,7 +130,7 @@ ai-content-generator/
 5. Create a Pull Request
 
 ## 📄 License
-[Your License - e.g., MIT License]
+MIT License
 
 ## 🌈 Disclaimer
 This tool is an AI assistant. Always review and validate generated content.
