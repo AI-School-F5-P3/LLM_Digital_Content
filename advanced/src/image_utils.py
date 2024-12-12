@@ -123,41 +123,77 @@ class ImageRetriever:
             return []
         
     def load_stable_diffusion(self):
-        """Load Stable Diffusion model lazily"""
+        """Load Stable Diffusion model with robust error handling"""
         if not self.stable_diffusion_model:
             try:
+                # Load with float32 instead of float16
                 self.stable_diffusion_model = StableDiffusionPipeline.from_pretrained(
                     "stabilityai/stable-diffusion-xl-base-1.0", 
-                    torch_dtype=torch.float32,
-                    device_map="cpu"  # Explicitly set to CPU
+                    torch_dtype=torch.float32,  # Changed from float16
+                    low_cpu_mem_usage=True,
+                    device_map="auto"
                 )
+                
+                print("Stable Diffusion model loaded successfully")
+                return self.stable_diffusion_model
+                
             except Exception as e:
-                print(f"Error loading Stable Diffusion: {e}")
-                return None
+                print(f"Comprehensive Stable Diffusion loading error: {e}")
+                import traceback
+                traceback.print_exc()
+                
+                # Fallback to a different model or method
+                try:
+                    self.stable_diffusion_model = StableDiffusionPipeline.from_pretrained(
+                        "runwayml/stable-diffusion-v1-5",  # Alternative model
+                        torch_dtype=torch.float32  # Ensure float32
+                    )
+                    print("Fallback model loaded successfully")
+                    return self.stable_diffusion_model
+                except Exception as fallback_error:
+                    print(f"Fallback loading failed: {fallback_error}")
+                    return None
+        
         return self.stable_diffusion_model
 
     def generate_ai_image(self, theme, count=1):
-        """Generate AI image using Stable Diffusion"""
+        """Generate AI image using Stable Diffusion with comprehensive error handling"""
+        print(f"Attempting to generate AI image for theme: {theme}")
+
+        # Debug device information
+        print("Torch version:", torch.__version__)
+        print("Current device: CPU")
+
         model = self.load_stable_diffusion()
         if not model:
+            print("Failed to load Stable Diffusion model")
             return []
         
         # Generate image with theme
         prompt = f"High-quality photorealistic image of {theme}, professional, detailed"
         
         try:
+            # Ensure model is on CPU
+            model = model.to("cpu")
+            
+            # Modify generation parameters
             images = model(
                 prompt=prompt, 
-                num_inference_steps=50, 
+                num_inference_steps=30,  # Reduced from 50 
                 guidance_scale=7.5, 
-                negative_prompt="low quality, blurry, sketch"
+                negative_prompt="low quality, blurry, sketch",
+                height=512,  # Explicitly set dimensions
+                width=512
             ).images
             
             # Save and prepare image URLs
             ai_images = []
             for i, image in enumerate(images[:count]):
-                # Save image temporarily
-                filename = f"ai_generated_{theme}_{i}.png"
+                # Create a directory for AI-generated images if it doesn't exist
+                os.makedirs("ai_generated_images", exist_ok=True)
+                
+                # Save image
+                filename = f"ai_generated_images/ai_generated_{theme}_{i}.png"
                 image.save(filename)
                 
                 ai_images.append({
@@ -166,8 +202,11 @@ class ImageRetriever:
                     "alt_description": f"AI image: {theme}"
                 })
             
+            print(f"Successfully generated {len(ai_images)} AI images")
             return ai_images
         
         except Exception as e:
-            print(f"AI image generation error: {e}")
+            print(f"Comprehensive AI image generation error: {e}")
+            import traceback
+            traceback.print_exc()
             return []

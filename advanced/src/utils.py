@@ -70,17 +70,6 @@ def post_process_content(content: str, platform: str) -> str:
         hashtags = "#content #creativity #platform_specific"
         return f"{cleaned_content}\n\n---\n{hashtags}"
 
-    elif platform == "Divulgación":
-        # Simplify language for a general audience
-        simple_content = cleaned_content.replace(",", ".").replace("however", "but").replace("therefore", "so")
-        return f"Did you know? {simple_content}"
-
-    elif platform == "Infantil":
-        # Use a friendly tone with bullet points
-        sentences = cleaned_content.split(". ")
-        bullets = "\n".join(f"• {sentence.strip()}." for sentence in sentences if sentence.strip())
-        return f"Hello, little ones! Let's learn something cool today:\n\n{bullets}"
-
     else:
         # Default: just clean the content
         return cleaned_content
